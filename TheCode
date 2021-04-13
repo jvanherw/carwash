@@ -1,0 +1,127 @@
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import time
+import board
+import busio
+import adafruit_vl6180x
+import threading
+
+from threading import Thread
+
+i2c = busio.I2C(board.SCL, board.SDA)
+sensor = adafruit_vl6180x.VL6180X(i2c)
+
+import RPi.GPIO as GPIO
+#import time
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+
+GPIO.setup(17,GPIO.OUT)
+GPIO.setup(27,GPIO.OUT)
+GPIO.setup(22,GPIO.OUT)
+pwmA = GPIO.PWM(17,100)
+pwmA.start(0)
+
+GPIO.setup(5,GPIO.OUT)
+GPIO.setup(6,GPIO.OUT)
+GPIO.setup(26,GPIO.OUT)
+pwmB = GPIO.PWM(26,100)
+pwmB.start(0)
+
+GPIO.setup(14,GPIO.OUT)
+GPIO.setup(15,GPIO.OUT)
+GPIO.setup(18,GPIO.OUT)
+pwmC = GPIO.PWM(14,100)
+pwmC.start(0)
+
+GPIO.setup(8,GPIO.OUT)
+GPIO.setup(7,GPIO.OUT)
+GPIO.setup(1,GPIO.OUT)
+pwmD = GPIO.PWM(8,100)
+pwmD.start(0)
+
+Request = None
+text = None
+
+class RequestHandler_httpd(BaseHTTPRequestHandler):
+    def do_GET(self):
+        global Request, text
+        messagetosend = bytes('Running',"utf")
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.send_header('Content-Length', len(messagetosend))
+        self.end_headers()
+        self.wfile.write(messagetosend)
+        Request = self.requestline
+        Request = Request[5 : int(len(Request)-9)]
+        print(Request)
+        if Request == 'on': #Motors
+            def right(x=100, t=0):
+                GPIO.output(27,True)
+                GPIO.output(22,False)
+                GPIO.output(5,True)
+                GPIO.output(6,False)
+                pwmA.ChangeDutyCycle(x)
+                pwmB.ChangeDutyCycle(x)
+                time.sleep(t)
+
+            def left(x=100,t=0):
+                GPIO.output(27,False)
+                GPIO.output(22,True)
+                GPIO.output(5,False)
+                GPIO.output(6,True)
+                pwmA.ChangeDutyCycle(x)
+                pwmB.ChangeDutyCycle(x)
+                time.sleep(t)
+                
+            # Linear Actuators
+            def inl(x=100,t=0):
+                GPIO.output(7,True)
+                GPIO.output(1,False)
+                GPIO.output(15,True)
+                GPIO.output(18,False)
+                pwmC.ChangeDutyCycle(x)
+                pwmD.ChangeDutyCycle(x)
+                time.sleep(t)
+                
+            def out(x=100,t=0):
+                GPIO.output(7,False)
+                GPIO.output(1,True)
+                GPIO.output(15,False)
+                GPIO.output(18,True)
+                pwmC.ChangeDutyCycle(x)
+                pwmD.ChangeDutyCycle(x)
+                time.sleep(t)
+                
+            def run1():
+                while True:
+                    range_mm = sensor.range
+                    print("Range: {0}mm".format(range_mm))
+                
+                    if range_mm == 255: #and range_mm == 25.4:    
+                        inl(0)
+                        out(0)
+                    
+                    elif range_mm < 25:
+                        out(100)
+                    
+                    elif range_mm > 25 and range_mm < 100:
+                        inl(100)
+
+            def run2():
+                right(100,2)
+                right(0)
+                left(100,4)
+                left(0)
+                right(100,2)
+                right(0)
+                
+        if __name__=='__main__':
+            Thread(target = run1).start()
+            Thread(target = run2).start()
+                  
+server_address_httpd = ('172.20.10.5',8080)
+httpd = HTTPServer(server_address_httpd, RequestHandler_httpd)
+print('Starting Server:')
+httpd.serve_forever()
+GPIO.cleanup()
