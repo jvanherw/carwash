@@ -98,22 +98,22 @@ class RequestHandler_httpd(BaseHTTPRequestHandler):
                     range_mm = sensor.range
                     print("Range: {0}mm".format(range_mm))
                 
-                    if range_mm == 255: #and range_mm == 25.4:    
+                    if range_mm == 255: #and range_mm == 100.4:    
                         inl(0)
                         out(0)
                     
-                    elif range_mm < 25:
+                    elif range_mm < 100:
                         out(100)
                     
-                    elif range_mm > 25 and range_mm < 100:
+                    elif range_mm > 100 and range_mm < 254:
                         inl(100)
 
             def run2():
-                right(100,2)
-                right(0)
-                left(100,4)
+                right(50,3.7)
+                right(0,2)
+                left(50,8.25)
                 left(0)
-                right(100,2)
+                right(50,4)
                 right(0)
                 
         if __name__=='__main__':
